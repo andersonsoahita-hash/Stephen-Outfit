@@ -225,7 +225,7 @@ function computeProposals(){
       const vivid=new Set(pcs.filter(i=>!colorInfo(i.color).neutral).map(i=>i.color));if(vivid.size>1)continue;
       const key=pcs.map(i=>i.id).sort().join('|');if(recentKeys.has(key))continue;
       const cols=new Set(pcs.map(i=>i.color));let sc=0;
-      if(cols.has('Noir')&&cols.has('Marine'))sc-=3;
+      if(cols.has('Noir')&&cols.has('Marine'))sc-=1;
       if(cols.has('Marron')&&cols.has('Noir'))sc-=2;
       if(t.color===b.color)sc+=colorInfo(t.color).neutral?.5:1;
       const light=c=>c==='Blanc'||c==='Beige',dark=c=>['Noir','Marine','Bleu jean','Gris','Marron'].includes(c);
@@ -241,8 +241,8 @@ function computeProposals(){
   let all=run(false),note='';
   if(!all.length){all=run(true);if(all.length)note='Peu de choix pour cette météo : j’ai assoupli la règle de chaleur.'}
   const sel=[],ut=new Map(),ub=new Map();
-  for(const o of all){if((ut.get(o.t.id)||0)>=1||(ub.get(o.b.id)||0)>=2)continue;sel.push(o);ut.set(o.t.id,1);ub.set(o.b.id,(ub.get(o.b.id)||0)+1);if(sel.length>=12)break}
-  for(const o of all){if(sel.length>=12)break;if(!sel.includes(o))sel.push(o)}
+  for(const o of all){if((ut.get(o.t.id)||0)>=2||(ub.get(o.b.id)||0)>=3)continue;sel.push(o);ut.set(o.t.id,(ut.get(o.t.id)||0)+1);ub.set(o.b.id,(ub.get(o.b.id)||0)+1);if(sel.length>=24)break}
+  for(const o of all){if(sel.length>=24)break;if(!sel.includes(o))sel.push(o)}
   // couverture : chaque vêtement disponible apparaît dans au moins une tenue valide (sans changer les règles)
   const used=new Set();for(const o of sel)for(const x of [o.t,o.b,o.s,o.j])x&&used.add(x.id);
   for(const o of all){if(sel.length>=24)break;const ids=[o.t,o.b,o.s,o.j].filter(Boolean).map(x=>x.id);if(ids.some(id=>!used.has(id))&&!sel.includes(o)){sel.push(o);ids.forEach(id=>used.add(id))}}
