@@ -30,9 +30,12 @@ body{background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%) fixed;min-h
 #app,.nav{position:relative;z-index:1}
 .card,.chip,.pill{backdrop-filter:blur(6px)}
 .card{background:color-mix(in srgb,var(--card) 88%,transparent)}
-#app.enter>*{animation:rise .3s ease both}
+#app.enter>*{animation:rise .55s cubic-bezier(.2,.8,.2,1) both}
 #app.enter>*:nth-child(2){animation-delay:.05s}#app.enter>*:nth-child(3){animation-delay:.1s}#app.enter>*:nth-child(4){animation-delay:.15s}#app.enter>*:nth-child(5){animation-delay:.2s}#app.enter>*:nth-child(n+6){animation-delay:.25s}
 #app.enter .grid3>*{animation:pop .45s cubic-bezier(.2,.9,.3,1.2) both}
+.brand .logo{animation:sway 6s ease-in-out infinite}
+.nav button.on span{display:inline-block;animation:bounce .5s}
+.btn:not(.ghost):not(.line):not(.bad){background-image:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.22) 50%,transparent 70%);background-size:250% 100%;animation:shine 5s ease-in-out infinite}
 #app.enter .grid3>*:nth-child(2){animation-delay:.04s}#app.enter .grid3>*:nth-child(3){animation-delay:.08s}#app.enter .grid3>*:nth-child(4){animation-delay:.12s}#app.enter .grid3>*:nth-child(n+5){animation-delay:.16s}
 @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 @keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
@@ -67,18 +70,6 @@ body{background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%) fixed;min-h
 @keyframes burst{0%{opacity:0;transform:translate(0,0) scale(.15) rotate(0)}12%{opacity:1}42%{transform:translate(var(--x),var(--y)) scale(1.3) rotate(var(--r))}56%{transform:translate(var(--x),calc(var(--y) - 34px)) scale(1.05) rotate(calc(var(--r) * -.5))}68%{transform:translate(var(--x),var(--y)) scale(1.12) rotate(calc(var(--r) * .3))}78%{transform:translate(var(--x),calc(var(--y) - 12px)) scale(1)}88%{transform:translate(var(--x),var(--y)) scale(1.04)}100%{opacity:1;transform:translate(var(--x),var(--y)) scale(1) rotate(0)}}
 @keyframes bob{from{transform:translateY(-7px) rotate(-5deg)}to{transform:translateY(7px) rotate(5deg)}}
 
-#app{view-transition-name:page}#nav{view-transition-name:navbar}
-::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
-::view-transition-old(page){animation:vtFo .14s ease both}
-::view-transition-new(page){animation:vtIn .3s cubic-bezier(.2,.8,.2,1) both}
-html[data-vt=prev]::view-transition-new(page){animation-name:vtInR}
-html[data-vt=fade]::view-transition-new(page){animation:vtFi .18s ease both}
-@keyframes vtFo{to{opacity:0}}@keyframes vtIn{from{opacity:0;transform:translateX(22px)}}@keyframes vtInR{from{opacity:0;transform:translateX(-22px)}}@keyframes vtFi{from{opacity:0}}
-.nav .ind{position:absolute;top:0;left:6px;width:calc((100% - 12px)/6);height:3px;display:block;pointer-events:none;transition:transform .3s ease}
-.nav .ind::after{content:"";display:block;width:34px;height:3px;border-radius:0 0 4px 4px;margin:0 auto;background:var(--acc);box-shadow:0 2px 10px var(--acc)}
-.nav button{transition:color .3s,transform .15s}.nav button:active{transform:scale(.9)}
-.sheet-bg{animation:fadeIn .18s ease both}.sheet{animation:slideUp .28s ease both}
-@keyframes fadeIn{from{opacity:0}}@keyframes slideUp{from{transform:translateY(24px);opacity:.5}}
 @keyframes ltr{from{opacity:0;transform:translateY(40px) scale(.4) rotate(-12deg)}to{opacity:1;transform:none}}
 @keyframes logoIn{0%{opacity:0;transform:scale(.1) rotate(-200deg)}60%{opacity:1}100%{opacity:1;transform:none}}
 @keyframes logoPulse{50%{transform:scale(1.07)}}
@@ -595,28 +586,18 @@ function viewSettings(){
   <div class="card"><h3>Sauvegarde</h3><div class="sub" style="margin-bottom:10px">Dernière sauvegarde : ${le}. Garde le fichier ailleurs (Fichiers, iCloud, Drive) : si tu perds le téléphone ou les données du navigateur, c’est ta seule copie.</div><div class="grid2"><button class="btn" data-a="export">Exporter</button><button class="btn line" data-a="import">Importer</button></div><div class="sub" style="margin:10px 0 6px">« Importer » remplace tout. « Ajouter » garde ton armoire et ajoute seulement les nouveaux vêtements d’un fichier.</div><button class="btn ghost" data-a="merge">Ajouter depuis un fichier</button><input type="file" id="impFile" accept="application/json,.json" hidden><input type="file" id="mrgFile" accept="application/json,.json" hidden></div>
   <div class="card"><h3>Exemples</h3><div class="sub" style="margin-bottom:10px">Pour tester l’app sans photographier : 16 vêtements fictifs, faciles à supprimer.</div>${ex?`<button class="btn line" data-a="demoOff">Supprimer les exemples</button>`:`<button class="btn ghost" data-a="demoOn">Charger les exemples</button>`}</div>
   <div class="card"><h3>Données</h3><div class="kv"><span>Vêtements</span><b>${S.items.length}</b></div><div class="kv"><span>Tenues journalisées</span><b>${S.log.length}</b></div><div class="kv"><span>Stockage protégé</span><b id="persist">…</b></div><button class="btn bad" style="margin-top:12px" data-a="reset">Tout effacer</button></div>
-  <div class="small" style="text-align:center;margin:18px 0">Akanjo (« vêtement » en malgache) · by Stephen · v4.5</div>`;
+  <div class="small" style="text-align:center;margin:18px 0">Akanjo (« vêtement » en malgache) · by Stephen · v4.6</div>`;
 }
 
 /* ───────── Rendu global ───────── */
 const METEO=[['chaud','☀️ Chaud'],['doux','🌤️ Doux'],['frais','🍂 Frais'],['froid','❄️ Froid']];
 const TABS=[['today','🏠','Accueil'],['week','📅','Semaine'],['closet','🗄️','Armoire'],['wash','🧺','Lavage'],['log','📖','Journal'],['set','⚙️','Réglages']];
-const TABIDX=k=>TABS.findIndex(t=>t[0]===k);
-const VT=!!document.startViewTransition&&!matchMedia('(prefers-reduced-motion:reduce)').matches;
 function render(){
-  if(!S.settings)return;
-  if(!VT||!S._did){S._did=true;return renderNow()}
-  const kind=S._lt!==S.tab?(TABIDX(S.tab)>TABIDX(S._lt)?'next':'prev'):'fade';
-  document.documentElement.dataset.vt=kind;
-  try{const t=document.startViewTransition(()=>{renderNow()});for(const k of ['ready','finished','updateCallbackDone'])t[k]&&t[k].catch(()=>{})}catch(e){renderNow()}
-}
-function renderNow(){
   if(!S.settings)return;
   const v={today:viewToday,week:viewWeek,closet:viewCloset,wash:viewWash,log:viewLog,set:viewSettings}[S.tab]();
   $('#app').innerHTML=v;
-  if(S._lt!==S.tab){scrollTo(0,0);S._lt=S.tab;if(!VT){const a=$('#app');a.classList.remove('enter');void a.offsetWidth;a.classList.add('enter');clearTimeout(S._et);S._et=setTimeout(()=>a.classList.remove('enter'),1100)}}
-  const nv=$('#nav');if(!nv.dataset.built){nv.innerHTML='<i class="ind"></i>'+TABS.map(([k,i,l])=>`<button data-a="tab" data-t="${k}"><span>${i}</span>${l}</button>`).join('');nv.dataset.built='1'}
-  nv.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===S.tab));nv.querySelector('.ind').style.transform=`translateX(${TABIDX(S.tab)*100}%)`;
+  if(S._lt!==S.tab){S._lt=S.tab;const a=$('#app');a.classList.remove('enter');void a.offsetWidth;a.classList.add('enter');clearTimeout(S._et);S._et=setTimeout(()=>a.classList.remove('enter'),1100)}
+  $('#nav').innerHTML=TABS.map(([k,i,l])=>`<button class="${S.tab===k?'on':''}" data-a="tab" data-t="${k}"><span>${i}</span>${l}</button>`).join('');
   if(S.tab==='set')navigator.storage?.persisted?.().then(p=>{const e=$('#persist');if(e)e.textContent=p?'Oui':'Non'});
 }
 
@@ -822,7 +803,7 @@ async function importData(file){
 
 /* ───────── Événements ───────── */
 const H={
-  tab:a=>{S.tab=a.dataset.t;render()},
+  tab:a=>{S.tab=a.dataset.t;render();scrollTo(0,0)},
   closeSheet:()=>closeSheet(),
   addItem:()=>itemSheet(null),
   editItem:a=>itemSheet(S.items.find(i=>i.id===a.dataset.id)),
