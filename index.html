@@ -483,6 +483,19 @@ async function applySeed(){
     if(added)toast(added+' vêtement'+(added>1?'s':'')+' ajouté'+(added>1?'s':''));
   }catch(e){}
 }
+/* ───────── Interrupteur d'accès (version de test) : lu seulement avec du réseau ───────── */
+async function accessLocked(){
+  try{
+    const ac=new AbortController();const to=setTimeout(()=>ac.abort(),5000);
+    let r;try{r=await fetch('acces.json?'+Date.now(),{cache:'no-store',signal:ac.signal})}finally{clearTimeout(to)}
+    if(!r.ok)return false;const j=await r.json();
+    if(!j||j.actif!==false)return false;
+    const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;z-index:1000;background:#F3F0E8;color:#1E2A23';ov.innerHTML='<div style="min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:28px;text-align:center;font-family:system-ui,sans-serif"><div style="font:italic 700 34px Georgia,serif">Akanjo</div><p id="lockMsg" style="max-width:340px;line-height:1.45"></p><button id="lockExp" style="border:0;border-radius:14px;padding:14px 22px;font:inherit;font-weight:700;background:#2F5D46;color:#fff">Exporter mes données</button></div>';document.body.appendChild(ov);
+    document.getElementById('lockMsg').textContent=String(j.message||'Cette version de test est terminée.').slice(0,300);
+    document.getElementById('lockExp').onclick=()=>exportData();
+    return true;
+  }catch(e){return false}
+}
 const OKID=/^[A-Za-z0-9_-]{1,64}$/;
 const num=(v,d,a,b)=>{v=Number(v);return Number.isFinite(v)?Math.min(b,Math.max(a,v)):d};
 function cleanItem(i){
@@ -563,6 +576,7 @@ document.addEventListener('change',async e=>{
   S.settings={...DEFAULT_SETTINGS,...(m?m.value:{}),maxByCat:{...DEFAULT_SETTINGS.maxByCat,...(m?.value?.maxByCat||{})}};
   S.items=await dbAll('items');S.log=await dbAll('log');
   await applySeed();
+  if(await accessLocked())return;
   S.weather=S.settings.weatherCache&&S.settings.weatherCache.date===todayStr()?S.settings.weatherCache:null;
   render();
   navigator.storage?.persist?.();
