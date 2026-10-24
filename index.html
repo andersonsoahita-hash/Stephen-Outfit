@@ -465,6 +465,21 @@ async function exportData(){
     S.settings.lastExport=Date.now();await saveSettings();render();toast('Sauvegarde créée ✓');
   }catch(e){if(e&&e.name!=='AbortError')toast('Export impossible')}
 }
+/* ───────── Vêtements ajoutés avec l'app (seed.json) : jamais d'écrasement, jamais de retour après suppression ───────── */
+async function applySeed(){
+  try{
+    const ac=new AbortController();const to=setTimeout(()=>ac.abort(),8000);
+    let r;try{r=await fetch('seed.json',{signal:ac.signal})}finally{clearTimeout(to)}
+    if(!r.ok)return;const j=await r.json();if(!j||!Array.isArray(j.items))return;
+    const seen=new Set(S.settings.seededIds||[]);const have=new Set(S.items.map(i=>i.id));let added=0;
+    for(const raw of j.items){
+      let it;try{it=cleanItem(raw)}catch(e){continue}
+      if(seen.has(it.id)||have.has(it.id)){seen.add(it.id);continue}
+      await dbPut('items',it);S.items.push(it);seen.add(it.id);added++}
+    if(added||seen.size!==(S.settings.seededIds||[]).length){S.settings.seededIds=[...seen];await saveSettings()}
+    if(added)toast(added+' vêtement'+(added>1?'s':'')+' ajouté'+(added>1?'s':''));
+  }catch(e){}
+}
 const OKID=/^[A-Za-z0-9_-]{1,64}$/;
 const num=(v,d,a,b)=>{v=Number(v);return Number.isFinite(v)?Math.min(b,Math.max(a,v)):d};
 function cleanItem(i){
@@ -544,6 +559,7 @@ document.addEventListener('change',async e=>{
   const m=await rq(st('meta').get('settings'));
   S.settings={...DEFAULT_SETTINGS,...(m?m.value:{}),maxByCat:{...DEFAULT_SETTINGS.maxByCat,...(m?.value?.maxByCat||{})}};
   S.items=await dbAll('items');S.log=await dbAll('log');
+  await applySeed();
   S.weather=S.settings.weatherCache&&S.settings.weatherCache.date===todayStr()?S.settings.weatherCache:null;
   render();
   navigator.storage?.persist?.();
