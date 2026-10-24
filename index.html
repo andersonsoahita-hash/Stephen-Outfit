@@ -425,32 +425,41 @@ function computeProposals(){
 }
 
 /* ───────── Actions métier ───────── */
-const todayEntry=()=>S.log.find(e=>e.date===todayStr());
+const todayEntries=()=>S.log.filter(e=>e.date===todayStr()).sort((a,b)=>a.ts-b.ts);
+const todayEntry=()=>todayEntries()[0];
+const canUndo=e=>Date.now()-e.ts<=864e5;
+const lblOf=ts=>{const h=new Date(ts).getHours();return h<12?'Matin':h<18?'Après-midi':'Soir'};
 async function validateOutfit(idx,ov){
-  if(todayEntry())return toast('Une tenue est déjà validée aujourd’hui');
   const o=ov||S.proposals[idx];if(!o)return;
   const ids=[o.t,o.b,o.s,o.j].filter(Boolean).map(i=>i.id);
   const accIds=(o.acc||[]).filter(a=>ov||!S.accOff.has(idx+':'+a.id)).map(a=>a.id);
-  const entry={id:uid(),date:todayStr(),ts:Date.now(),items:[],photo:null};
+  const worn=new Set(todayEntries().flatMap(e=>e.items.map(x=>x.id)));
+  const entry={id:uid(),date:todayStr(),ts:Date.now(),lbl:lblOf(Date.now()),items:[],photo:null};
   for(const id of ids.concat(accIds)){
-    const it=S.items.find(i=>i.id===id);if(!it)continue;if(it.cat==='acc'){it.totalWears=(it.totalWears||0)+1;it.lastWorn=entry.date;entry.items.push({id,flipped:false});await dbPut('items',it);continue}
+    const it=S.items.find(i=>i.id===id);if(!it)continue;if(worn.has(id)){entry.items.push({id,flipped:false,dup:true});continue}if(it.cat==='acc'){it.totalWears=(it.totalWears||0)+1;it.lastWorn=entry.date;entry.items.push({id,flipped:false});await dbPut('items',it);continue}
     it.wears++;it.totalWears=(it.totalWears||0)+1;it.lastWorn=entry.date;
     let flipped=false;if(it.wears>=it.maxWears&&it.status==='propre'){it.status='sale';flipped=true}
     entry.items.push({id,flipped});await dbPut('items',it);
   }
-  S.log.push(entry);await dbPut('log',entry);S.dirty=true;render();toast('Tenue validée ✓');
+  S.log.push(entry);await dbPut('log',entry);S.dirty=true;S.addMore=false;render();toast('Tenue validée ✓');
 }
-async function undoToday(){
-  const e=todayEntry();if(!e)return toast('Aucune tenue à annuler');
+async function undoEntry(id){
+  const list=todayEntries();const e=id?S.log.find(l=>l.id===id):list[list.length-1];
+  if(!e)return toast('Aucune tenue à annuler');
+  if(!canUndo(e))return toast('Annulation possible pendant 24 h seulement');
   try{await undoCore(e)}catch(err){toast('Annulation impossible : '+(err&&err.message||'erreur'))}
 }
 async function undoCore(e){
+  const others=S.log.filter(l=>l.id!==e.id);
   for(const x of e.items){const it=S.items.find(i=>i.id===x.id);if(!it)continue;
-    it.wears=Math.max(0,it.wears-1);it.totalWears=Math.max(0,(it.totalWears||1)-1);
-    if(x.flipped&&it.status==='sale')it.status='propre';
-    const prev=S.log.filter(l=>l.id!==e.id&&l.items.some(y=>y.id===it.id)).map(l=>l.date).sort().pop();it.lastWorn=prev||null;
+    if(!x.dup){
+      const heir=others.find(l=>l.date===e.date&&l.items.some(y=>y.id===x.id&&y.dup));
+      if(heir){const y=heir.items.find(y=>y.id===x.id&&y.dup);y.dup=false;y.flipped=x.flipped;await dbPut('log',heir)}
+      else{it.wears=Math.max(0,it.wears-1);it.totalWears=Math.max(0,(it.totalWears||1)-1);if(x.flipped&&it.status==='sale')it.status='propre'}
+    }
+    const prev=others.filter(l=>l.items.some(y=>y.id===it.id)).map(l=>l.date).sort().pop();it.lastWorn=prev||null;
     await dbPut('items',it)}
-  S.log=S.log.filter(l=>l.id!==e.id);await dbDel('log',e.id);S.dirty=true;render();toast('Tenue annulée');
+  S.log=others;await dbDel('log',e.id);S.dirty=true;render();toast('Tenue annulée');
 }
 async function setStatus(id,status){
   const it=S.items.find(i=>i.id===id);if(!it)return;it.status=status;if(status==='propre')it.wears=0;
@@ -487,7 +496,7 @@ function outfitTiles(o){return stack([o.t,o.b,o.s,o.j])}
 
 /* ───────── Vues ───────── */
 function viewToday(){
-  const mode=currentMode(),w=S.weather,e=todayEntry();
+  const mode=currentMode(),w=S.weather;
   const need=!S.items.some(i=>i.cat==='robe')&&(!S.items.some(i=>i.cat==='haut')||!S.items.some(i=>i.cat==='bas'));
   let h=`<div class="row sp"><div><div class="brand"><img class="logo" src="icon-192.png" alt="" width="38" height="38"><b>Akanjo</b><span>by Stephen</span></div><div class="sub">${esc(fmtDate(todayStr()))}</div></div></div>`;
   const hr=new Date().getHours(),greet=hr<5?'Bonne nuit':hr<12?'Bonjour':hr<18?'Bon après-midi':'Bonsoir';
@@ -506,13 +515,14 @@ function viewToday(){
   if(S.items.length&&lowT<S.settings.lowTops)h+=`<div class="banner warn">Il te reste <b>${lowT}</b> haut${lowT>1?'s':''} propre${lowT>1?'s':''}. Pense à lancer une machine. <a href="#" data-a="tab" data-t="wash" style="color:inherit"><b>Voir le panier</b></a></div>`;
   if(S.items.length&&!S.settings.profil)h+=`<div class="card"><b>Pour qui est cette armoire ?</b><div class="sub" style="margin:4px 0 10px">Ça adapte seulement les types de vêtements proposés.</div><div class="chips">${PROFILS.map(([k,l])=>`<span class="chip" data-a="profil" data-p="${k}">${l}</span>`).join('')}</div></div>`;
   const le=S.settings.lastExport;if(S.items.filter(i=>!i.demo).length>3&&(!le||Date.now()-le>14*864e5))h+=`<div class="banner warn">Sauvegarde conseillée : tes photos ne sont que sur ce téléphone. <a href="#" data-a="tab" data-t="set" style="color:inherit"><b>Sauvegarder</b></a></div>`;
-  if(e){
+  const tes=todayEntries();
+  tes.forEach((e,k)=>{
     const its=e.items.map(x=>S.items.find(i=>i.id===x.id)).filter(Boolean);
-    h+=`<div class="card"><h3>Tenue d’aujourd’hui ✓</h3>${stack(its)}
+    h+=`<div class="card"><div class="row sp"><h3>${tes.length>1?esc(e.lbl||'Tenue')+' · ':''}Tenue d’aujourd’hui ✓</h3><span class="sub">${new Date(e.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>${stack(its,tes.length>1)}
     ${e.photo?`<img class="logphoto" src="${blobURL('log'+e.id,e.photo)}" alt="">`:''}
-    <div class="grid2" style="margin-top:12px"><button class="btn ghost sm" data-a="entryPhoto" data-id="${e.id}">${e.photo?'Changer la photo':'Ajouter une photo de moi'}</button><button class="btn line sm" data-a="undo">Annuler / changer de tenue</button></div></div>`;
-    return h;
-  }
+    <div class="grid2" style="margin-top:12px"><button class="btn ghost sm" data-a="entryPhoto" data-id="${e.id}">${e.photo?'Changer la photo':'Ajouter une photo de moi'}</button>${canUndo(e)?`<button class="btn line sm" data-a="undo" data-id="${e.id}">Annuler cette tenue</button>`:'<span></span>'}</div></div>`});
+  if(tes.length&&!S.addMore)return h+`<button class="btn line" data-a="moreOutfit" style="margin-top:4px">＋ Une autre tenue (soirée, sortie…)</button>`;
+  if(tes.length)h+=`<div class="row sp" style="margin:10px 0"><h2 style="font-size:19px">Autre tenue</h2><button class="btn line sm" data-a="lessOutfit">Fermer</button></div>`;
   if(need)return h+`<div class="card empty"><div class="big">👕</div><b>Ajoute tes premiers vêtements</b><div class="sub" style="margin:6px 0 14px">Il faut au moins un haut et un bas (ou une robe), et des chaussures.</div><button class="btn" data-a="addItem">Ajouter un vêtement</button><div style="height:8px"></div><button class="btn ghost" data-a="demoOn">Essayer avec des exemples</button></div>`;
   if(S.dirty)computeProposals();
   h+=`<div class="chips" style="margin:2px 0 8px">${[['all','Toutes'],...OCC].map(([k,l])=>`<span class="chip ${S.occ===k?'on':''}" data-a="occ" data-o="${k}">${l}</span>`).join('')}</div>`;
@@ -572,7 +582,7 @@ function viewLog(){
   let h=`<h2 style="font-size:24px">Journal</h2><div class="sub">${l.length} tenue${l.length>1?'s':''} portée${l.length>1?'s':''}</div>`;
   if(!l.length)return h+`<div class="empty"><div class="big">📖</div>Valide une tenue pour la retrouver ici.</div>`;
   for(const e of l){const its=e.items.map(x=>S.items.find(i=>i.id===x.id)).filter(Boolean);
-    h+=`<div class="card"><div class="row sp"><b style="text-transform:capitalize">${esc(fmtDate(e.date))}</b><button class="btn ghost sm" data-a="entryPhoto" data-id="${e.id}">${e.photo?'📷 Changer':'📷 Photo'}</button></div><div style="margin-top:10px">${stack(its,true)}</div>${e.photo?`<img class="logphoto" src="${blobURL('log'+e.id,e.photo)}" alt="">`:''}</div>`}
+    h+=`<div class="card"><div class="row sp"><b style="text-transform:capitalize">${esc(fmtDate(e.date))}${e.lbl?` · ${esc(e.lbl)}`:''}</b><button class="btn ghost sm" data-a="entryPhoto" data-id="${e.id}">${e.photo?'📷 Changer':'📷 Photo'}</button></div><div style="margin-top:10px">${stack(its,true)}</div>${e.photo?`<img class="logphoto" src="${blobURL('log'+e.id,e.photo)}" alt="">`:''}${canUndo(e)?`<button class="btn line sm" style="margin-top:10px" data-a="undo" data-id="${e.id}">Annuler cette tenue <span class="small">(possible 24 h)</span></button>`:''}</div>`}
   return h;
 }
 function viewSettings(){
@@ -587,7 +597,7 @@ function viewSettings(){
   <div class="card"><h3>Sauvegarde</h3><div class="sub" style="margin-bottom:10px">Dernière sauvegarde : ${le}. Garde le fichier ailleurs (Fichiers, iCloud, Drive) : si tu perds le téléphone ou les données du navigateur, c’est ta seule copie.</div><div class="grid2"><button class="btn" data-a="export">Exporter</button><button class="btn line" data-a="import">Importer</button></div><div class="sub" style="margin:10px 0 6px">« Importer » remplace tout. « Ajouter » garde ton armoire et ajoute seulement les nouveaux vêtements d’un fichier.</div><button class="btn ghost" data-a="merge">Ajouter depuis un fichier</button><input type="file" id="impFile" accept="application/json,.json" hidden><input type="file" id="mrgFile" accept="application/json,.json" hidden></div>
   <div class="card"><h3>Exemples</h3><div class="sub" style="margin-bottom:10px">Pour tester l’app sans photographier : 16 vêtements fictifs, faciles à supprimer.</div>${ex?`<button class="btn line" data-a="demoOff">Supprimer les exemples</button>`:`<button class="btn ghost" data-a="demoOn">Charger les exemples</button>`}</div>
   <div class="card"><h3>Données</h3><div class="kv"><span>Vêtements</span><b>${S.items.length}</b></div><div class="kv"><span>Tenues journalisées</span><b>${S.log.length}</b></div><div class="kv"><span>Stockage protégé</span><b id="persist">…</b></div><button class="btn bad" style="margin-top:12px" data-a="reset">Tout effacer</button></div>
-  <div class="small" style="text-align:center;margin:18px 0">Akanjo (« vêtement » en malgache) · by Stephen · v4.7</div>`;
+  <div class="small" style="text-align:center;margin:18px 0">Akanjo (« vêtement » en malgache) · by Stephen · v4.8</div>`;
 }
 
 /* ───────── Rendu global ───────── */
@@ -761,6 +771,7 @@ function cleanLog(l){
   if(!l||typeof l!=='object'||!OKID.test(String(l.id)))throw 0;
   const o={...l};o.id=String(l.id);o.date=String(l.date??'').slice(0,10);o.ts=num(l.ts,0,0,9e15);
   o.items=Array.isArray(l.items)?l.items.map(x=>({...x,id:String(x?.id??'')})).filter(x=>OKID.test(x.id)):[];
+  o.lbl=String(l.lbl||'').slice(0,20);
   o.photo=typeof l.photo==='string'&&l.photo.startsWith('data:image/')?dataURLToBlob(l.photo):null;
   return o}
 async function mergeData(file){
@@ -809,7 +820,9 @@ const H={
   addItem:()=>itemSheet(null),
   editItem:a=>itemSheet(S.items.find(i=>i.id===a.dataset.id)),
   validate:a=>validateOutfit(+a.dataset.i),
-  undo:()=>undoToday(),
+  undo:a=>undoEntry(a.dataset.id),
+  moreOutfit:()=>{S.addMore=true;S.dirty=true;render()},
+  lessOutfit:()=>{S.addMore=false;render()},
   planMake:async()=>{toast('Je prépare ta semaine…');await buildPlan(0,(S.settings.planBump=(S.settings.planBump||0)+1));render();toast('Planning prêt ✓')},
   planRe:async a=>{const k=+a.dataset.k;await buildPlan(k,(S.settings.planBump=(S.settings.planBump||0)+1));render()},
   planUse:async()=>{const d=S.settings.plan&&S.settings.plan.days.find(x=>x.date===todayStr());if(!d)return;const its=d.ids.map(id=>S.items.find(i=>i.id===id)).filter(Boolean);if(its.length!==d.ids.length)return toast('Refais le planning');
