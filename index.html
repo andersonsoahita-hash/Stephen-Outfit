@@ -243,6 +243,9 @@ function computeProposals(){
   const sel=[],ut=new Map(),ub=new Map();
   for(const o of all){if((ut.get(o.t.id)||0)>=1||(ub.get(o.b.id)||0)>=2)continue;sel.push(o);ut.set(o.t.id,1);ub.set(o.b.id,(ub.get(o.b.id)||0)+1);if(sel.length>=12)break}
   for(const o of all){if(sel.length>=12)break;if(!sel.includes(o))sel.push(o)}
+  // couverture : chaque vêtement disponible apparaît dans au moins une tenue valide (sans changer les règles)
+  const used=new Set();for(const o of sel)for(const x of [o.t,o.b,o.s,o.j])x&&used.add(x.id);
+  for(const o of all){if(sel.length>=24)break;const ids=[o.t,o.b,o.s,o.j].filter(Boolean).map(x=>x.id);if(ids.some(id=>!used.has(id))&&!sel.includes(o)){sel.push(o);ids.forEach(id=>used.add(id))}}
   if(useJ&&!S.items.some(i=>i.cat==='veste'&&avail(i)))note=(note?note+' ':'')+'Aucune veste disponible.';
   if(!S.items.some(i=>i.cat==='chaussures'&&avail(i)))note=(note?note+' ':'')+'Aucune chaussure disponible.';
   S.proposals=sel;S.note=note;S.dirty=false;
