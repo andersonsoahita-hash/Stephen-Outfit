@@ -44,6 +44,8 @@ body{background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%) fixed;min-h
 @keyframes bounce{40%{transform:translateY(-6px) scale(1.2)}}
 .brand .logo{animation:sway 6s ease-in-out infinite}
 @keyframes sway{50%{transform:rotate(-5deg)}}
+.strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}.strip>div{width:62px;flex:none}.strip .tn{font-size:10.5px;line-height:1.15;margin-top:3px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav button{min-width:0}.nav button span{font-size:19px}
 #splash{position:fixed;inset:0;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:linear-gradient(160deg,var(--acc) 0%,#1b3a2b 100%);color:#fff;animation:splashOut .6s ease 1.5s forwards}
 #splash img{width:96px;height:96px;border-radius:26px;animation:logoIn .9s cubic-bezier(.2,.9,.3,1.3) both;box-shadow:0 14px 40px rgba(0,0,0,.35)}
 #splash b{font:italic 700 34px Georgia,serif;animation:rise .8s .3s both}
@@ -223,7 +225,7 @@ function dataURLToBlob(u){const [h,d]=u.split(',');const mime=(h.match(/:(.*?);/
 const avail=i=>i.status==='propre'&&i.condition==='bon';
 const lifePct=i=>i.status!=='propre'?0:Math.max(0,Math.min(1,(i.maxWears-i.wears)/i.maxWears));
 const barColor=p=>p>.5?'var(--ok)':p>.25?'var(--warn)':'var(--bad)';
-const statusLabel=i=>i.cat==='acc'&&i.condition==='bon'?'Accessoire':i.condition==='abime'?'Abîmé':i.condition==='use'?'Usé':i.status==='sale'?(i.cat==='chaussures'||i.cat==='veste'?'À nettoyer':'Sale'):i.status==='lavage'?'En lavage':`${Math.max(0,i.maxWears-i.wears)} port${i.maxWears-i.wears>1?'s':''} restant${i.maxWears-i.wears>1?'s':''}`;
+const statusLabel=i=>i.cat==='acc'&&i.condition==='bon'?'Sans lavage':i.condition==='abime'?'Abîmé':i.condition==='use'?'Usé':i.status==='sale'?(i.cat==='chaussures'||i.cat==='veste'?'À nettoyer':'Sale'):i.status==='lavage'?'En lavage':`${Math.max(0,i.maxWears-i.wears)} port${i.maxWears-i.wears>1?'s':''} restant${i.maxWears-i.wears>1?'s':''}`;
 function defaultWash(cat,color){
   if(cat==='chaussures'||cat==='veste')return ['Nettoyage spécial','À la main'];
   if(cat==='robe')return ['Délicats','30°'];
@@ -251,6 +253,49 @@ async function loadWeather(force){
   }catch(e){S.weather=c||null}
 }
 
+async function loadForecast(){
+  const c=S.settings.forecastCache;
+  if(c&&c.date===todayStr()&&Date.now()-c.ts<3*3600e3)return c.days;
+  try{
+    const {lat,lon}=S.settings;const ac=new AbortController();const to=setTimeout(()=>ac.abort(),6000);
+    let r;try{r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=7`,{signal:ac.signal})}finally{clearTimeout(to)}
+    if(!r.ok)throw 0;const j=await r.json();const d=j.daily;
+    const days=d.time.map((t,k)=>({date:t,max:d.temperature_2m_max[k],min:d.temperature_2m_min[k],rain:d.precipitation_probability_max[k]})).filter(x=>Number.isFinite(x.max)&&Number.isFinite(x.min)&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)).map(x=>({...x,feel:x.max*.6+x.min*.4}));
+    if(!days.length)throw 0;
+    S.settings.forecastCache={date:todayStr(),ts:Date.now(),days};saveSettings();return days;
+  }catch(e){return c?c.days:[]}
+}
+/* ───────── Planning ───────── */
+const addDays=(d,n)=>{const x=new Date(d+'T12:00');x.setDate(x.getDate()+n);return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`};
+async function buildPlan(from,bump){
+  const fc=await loadForecast();const old=S.settings.plan&&S.settings.plan.days||[];
+  const today=todayStr(),N=7;
+  const sv={items:S.items,log:S.log,seed:S.seed,wo:S.settings.weatherOverride,uj:S.useJacket,occ:S.occ,off:S.accOff,prop:S.proposals,note:S.note,dirty:S.dirty};
+  const days=[];
+  try{
+    S.items=S.items.map(i=>({...i}));S.log=S.log.slice();S.occ='all';S.accOff=new Set();
+    const wear=(ids)=>{const fake={id:'sim'+Math.random(),date:today,ts:Date.now(),items:[]};
+      for(const id of ids){const it=S.items.find(i=>i.id===id);if(!it)continue;fake.items.push({id,flipped:false});it.lastWorn=today;
+        if(it.cat==='acc')continue;it.wears++;if(it.wears>=it.maxWears&&it.status==='propre')it.status='sale'}
+      S.log.push(fake)};
+    for(let k=0;k<N;k++){
+      const date=addDays(today,k),f=fc.find(x=>x.date===date);
+      const mode=sv.wo!=='auto'?sv.wo:(f?modeFromTemp(f.feel):(S.weather?modeFromTemp(S.weather.feel):'doux'));
+      const keepOld=k<from?old.find(d=>d.date===date):null;
+      if(keepOld&&keepOld.ids.every(id=>S.items.some(i=>i.id===id))){days.push(keepOld);wear(keepOld.ids.concat(keepOld.acc||[]));continue}
+      const ent=k===0?sv.log.find(e=>e.date===today):null;
+      if(ent){const ids=ent.items.map(x=>x.id);days.push({date,mode,ids:ids.filter(id=>{const i=S.items.find(q=>q.id===id);return i&&i.cat!=='acc'}),acc:ids.filter(id=>{const i=S.items.find(q=>q.id===id);return i&&i.cat==='acc'}),done:true,f:f?{min:f.min,max:f.max,rain:f.rain}:null});
+        continue}
+      S.settings.weatherOverride=mode;S.useJacket=null;S.seed=(bump||0)*31+k*7+3;S.dirty=true;
+      computeProposals();
+      const o=S.proposals[0];
+      if(!o){days.push({date,mode,ids:[],acc:[],f:f?{min:f.min,max:f.max,rain:f.rain}:null});continue}
+      const ids=[o.t,o.b,o.s,o.j].filter(Boolean).map(i=>i.id),acc=(o.acc||[]).map(a=>a.id);
+      days.push({date,mode,ids,acc,f:f?{min:f.min,max:f.max,rain:f.rain}:null});wear(ids.concat(acc));
+    }
+  }finally{S.items=sv.items;S.log=sv.log;S.seed=sv.seed;S.settings.weatherOverride=sv.wo;S.useJacket=sv.uj;S.occ=sv.occ;S.accOff=sv.off;S.proposals=sv.prop;S.note=sv.note;S.dirty=true}
+  S.settings.plan={made:today,days};await saveSettings();
+}
 /* ───────── Moteur de combinaisons (règles pures, sans IA) ───────── */
 function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function hashStr(s){let h=2166136261;for(const ch of s){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
@@ -349,14 +394,14 @@ function computeProposals(){
 
 /* ───────── Actions métier ───────── */
 const todayEntry=()=>S.log.find(e=>e.date===todayStr());
-async function validateOutfit(idx){
+async function validateOutfit(idx,ov){
   if(todayEntry())return toast('Une tenue est déjà validée aujourd’hui');
-  const o=S.proposals[idx];if(!o)return;
+  const o=ov||S.proposals[idx];if(!o)return;
   const ids=[o.t,o.b,o.s,o.j].filter(Boolean).map(i=>i.id);
-  const accIds=(o.acc||[]).filter(a=>!S.accOff.has(idx+':'+a.id)).map(a=>a.id);
+  const accIds=(o.acc||[]).filter(a=>ov||!S.accOff.has(idx+':'+a.id)).map(a=>a.id);
   const entry={id:uid(),date:todayStr(),ts:Date.now(),items:[],photo:null};
   for(const id of ids.concat(accIds)){
-    const it=S.items.find(i=>i.id===id);if(it.cat==='acc'){it.totalWears=(it.totalWears||0)+1;it.lastWorn=entry.date;entry.items.push({id,flipped:false});await dbPut('items',it);continue}
+    const it=S.items.find(i=>i.id===id);if(!it)continue;if(it.cat==='acc'){it.totalWears=(it.totalWears||0)+1;it.lastWorn=entry.date;entry.items.push({id,flipped:false});await dbPut('items',it);continue}
     it.wears++;it.totalWears=(it.totalWears||0)+1;it.lastWorn=entry.date;
     let flipped=false;if(it.wears>=it.maxWears&&it.status==='propre'){it.status='sale';flipped=true}
     entry.items.push({id,flipped});await dbPut('items',it);
@@ -364,7 +409,10 @@ async function validateOutfit(idx){
   S.log.push(entry);await dbPut('log',entry);S.dirty=true;render();toast('Tenue validée ✓');
 }
 async function undoToday(){
-  const e=todayEntry();if(!e)return;
+  const e=todayEntry();if(!e)return toast('Aucune tenue à annuler');
+  try{await undoCore(e)}catch(err){toast('Annulation impossible : '+(err&&err.message||'erreur'))}
+}
+async function undoCore(e){
   for(const x of e.items){const it=S.items.find(i=>i.id===x.id);if(!it)continue;
     it.wears=Math.max(0,it.wears-1);it.totalWears=Math.max(0,(it.totalWears||1)-1);
     if(x.flipped&&it.status==='sale')it.status='propre';
@@ -420,7 +468,7 @@ function viewToday(){
     const its=e.items.map(x=>S.items.find(i=>i.id===x.id)).filter(Boolean);
     h+=`<div class="card"><h3>Tenue d’aujourd’hui ✓</h3>${stack(its)}
     ${e.photo?`<img class="logphoto" src="${blobURL('log'+e.id,e.photo)}" alt="">`:''}
-    <div class="grid2" style="margin-top:12px"><button class="btn ghost sm" data-a="entryPhoto" data-id="${e.id}">${e.photo?'Changer la photo':'Ajouter une photo de moi'}</button><button class="btn line sm" data-a="undo">Annuler la tenue</button></div></div>`;
+    <div class="grid2" style="margin-top:12px"><button class="btn ghost sm" data-a="entryPhoto" data-id="${e.id}">${e.photo?'Changer la photo':'Ajouter une photo de moi'}</button><button class="btn line sm" data-a="undo">Annuler / changer de tenue</button></div></div>`;
     return h;
   }
   if(need)return h+`<div class="card empty"><div class="big">👕</div><b>Ajoute tes premiers vêtements</b><div class="sub" style="margin:6px 0 14px">Il faut au moins un haut et un bas (ou une robe), et des chaussures.</div><button class="btn" data-a="addItem">Ajouter un vêtement</button><div style="height:8px"></div><button class="btn ghost" data-a="demoOn">Essayer avec des exemples</button></div>`;
@@ -435,6 +483,21 @@ function viewToday(){
   for(const idx of show){const o=S.proposals[idx];
     h+=`<div class="card">${outfitTiles(o)}${accChips(o,idx)}<button class="btn" style="margin-top:12px" data-a="validate" data-i="${idx}">Valider cette tenue</button></div>`}
   if(n>4)h+=`<button class="btn line" data-a="more">Autres propositions</button>`;
+  return h;
+}
+function viewWeek(){
+  const p=S.settings.plan;let h=`<div class="row sp"><h2 style="font-size:24px">Semaine</h2><button class="btn sm" data-a="planMake">${p&&p.days.length?'↻ Refaire':'Planifier'}</button></div><div class="sub">Tes 7 prochains jours, avec la météo prévue et sans réutiliser les mêmes pièces.</div>`;
+  if(!S.items.length)return h+`<div class="empty"><div class="big">📅</div>Ajoute d’abord des vêtements.</div>`;
+  const today=todayStr();const days=p?p.days.filter(d=>d.date>=today):[];
+  if(!days.length)return h+`<div class="card empty"><div class="big">📅</div><b>Pas encore de planning</b><div class="sub" style="margin:6px 0 14px">Je prépare 7 tenues d’avance en tenant compte de la météo et de ce qui est propre.</div><button class="btn" data-a="planMake">Planifier mes 7 jours</button></div>`;
+  h+=`<div class="banner">Le planning suppose qu’il n’y a pas de machine pendant la semaine. Si une pièce devient sale, refais le planning.</div>`;
+  days.forEach((d,k)=>{
+    const its=d.ids.map(id=>S.items.find(i=>i.id===id)).filter(Boolean),acc=(d.acc||[]).map(id=>S.items.find(i=>i.id===id)).filter(Boolean);
+    const miss=d.ids.length&&its.length<d.ids.length;
+    h+=`<div class="card"><div class="row sp"><b style="text-transform:capitalize">${k===0?'Aujourd’hui':esc(new Date(d.date+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'}))}</b><span class="pill" style="font-weight:700">${MODES[d.mode]||''}${d.f?` · ${Math.round(d.f.min)}°/${Math.round(d.f.max)}°`:''}</span></div>`;
+    if(!its.length||miss)h+=`<div class="sub" style="margin:10px 0">${miss?'Une pièce a été supprimée : refais ce jour.':'Pas assez de pièces propres ce jour-là. Lance une machine.'}</div>`;
+    else h+=`<div class="strip" style="margin-top:10px">${its.sort((a,b)=>ORDER[a.cat]-ORDER[b.cat]).map(i=>`<div title="${esc(i.name)}">${thumb(i)}<div class="tn">${esc(i.name)}</div></div>`).join('')}</div>${acc.length?`<div class="sub" style="margin-top:8px">+ ${acc.map(a=>esc(a.name)).join(', ')}</div>`:''}`;
+    h+=`<div class="grid2" style="margin-top:10px">${k===0&&d.done?`<div class="sub" style="align-self:center">✓ Validée</div>`:k===0&&its.length&&!miss?`<button class="btn sm" data-a="planUse">Porter aujourd’hui</button>`:'<span></span>'}${d.done?'':`<button class="btn line sm" data-a="planRe" data-k="${k}">Autre tenue</button>`}</div></div>`});
   return h;
 }
 function viewCloset(){
@@ -482,15 +545,15 @@ function viewSettings(){
   <div class="card"><h3>Sauvegarde</h3><div class="sub" style="margin-bottom:10px">Dernière sauvegarde : ${le}. Garde le fichier ailleurs (Fichiers, iCloud, Drive) : si tu perds le téléphone ou les données du navigateur, c’est ta seule copie.</div><div class="grid2"><button class="btn" data-a="export">Exporter</button><button class="btn line" data-a="import">Importer</button></div><div class="sub" style="margin:10px 0 6px">« Importer » remplace tout. « Ajouter » garde ton armoire et ajoute seulement les nouveaux vêtements d’un fichier.</div><button class="btn ghost" data-a="merge">Ajouter depuis un fichier</button><input type="file" id="impFile" accept="application/json,.json" hidden><input type="file" id="mrgFile" accept="application/json,.json" hidden></div>
   <div class="card"><h3>Exemples</h3><div class="sub" style="margin-bottom:10px">Pour tester l’app sans photographier : 16 vêtements fictifs, faciles à supprimer.</div>${ex?`<button class="btn line" data-a="demoOff">Supprimer les exemples</button>`:`<button class="btn ghost" data-a="demoOn">Charger les exemples</button>`}</div>
   <div class="card"><h3>Données</h3><div class="kv"><span>Vêtements</span><b>${S.items.length}</b></div><div class="kv"><span>Tenues journalisées</span><b>${S.log.length}</b></div><div class="kv"><span>Stockage protégé</span><b id="persist">…</b></div><button class="btn bad" style="margin-top:12px" data-a="reset">Tout effacer</button></div>
-  <div class="small" style="text-align:center;margin:18px 0">Akanjo (« vêtement » en malgache) · by Stephen · v4.1</div>`;
+  <div class="small" style="text-align:center;margin:18px 0">Akanjo (« vêtement » en malgache) · by Stephen · v4.2</div>`;
 }
 
 /* ───────── Rendu global ───────── */
 const METEO=[['chaud','☀️ Chaud'],['doux','🌤️ Doux'],['frais','🍂 Frais'],['froid','❄️ Froid']];
-const TABS=[['today','🏠','Aujourd’hui'],['closet','🗄️','Armoire'],['wash','🧺','Lavage'],['log','📖','Journal'],['set','⚙️','Réglages']];
+const TABS=[['today','🏠','Accueil'],['week','📅','Semaine'],['closet','🗄️','Armoire'],['wash','🧺','Lavage'],['log','📖','Journal'],['set','⚙️','Réglages']];
 function render(){
   if(!S.settings)return;
-  const v={today:viewToday,closet:viewCloset,wash:viewWash,log:viewLog,set:viewSettings}[S.tab]();
+  const v={today:viewToday,week:viewWeek,closet:viewCloset,wash:viewWash,log:viewLog,set:viewSettings}[S.tab]();
   $('#app').innerHTML=v;
   if(S._lt!==S.tab){S._lt=S.tab;const a=$('#app');a.classList.remove('enter');void a.offsetWidth;a.classList.add('enter');clearTimeout(S._et);S._et=setTimeout(()=>a.classList.remove('enter'),1100)}
   $('#nav').innerHTML=TABS.map(([k,i,l])=>`<button class="${S.tab===k?'on':''}" data-a="tab" data-t="${k}"><span>${i}</span>${l}</button>`).join('');
@@ -705,6 +768,11 @@ const H={
   editItem:a=>itemSheet(S.items.find(i=>i.id===a.dataset.id)),
   validate:a=>validateOutfit(+a.dataset.i),
   undo:()=>undoToday(),
+  planMake:async()=>{toast('Je prépare ta semaine…');await buildPlan(0,(S.settings.planBump=(S.settings.planBump||0)+1));render();toast('Planning prêt ✓')},
+  planRe:async a=>{const k=+a.dataset.k;await buildPlan(k,(S.settings.planBump=(S.settings.planBump||0)+1));render()},
+  planUse:async()=>{const d=S.settings.plan&&S.settings.plan.days.find(x=>x.date===todayStr());if(!d)return;const its=d.ids.map(id=>S.items.find(i=>i.id===id)).filter(Boolean);if(its.length!==d.ids.length)return toast('Refais le planning');
+    const o={t:its.find(i=>i.cat==='haut'||i.cat==='robe'),b:its.find(i=>i.cat==='bas')||null,s:its.find(i=>i.cat==='chaussures')||null,j:its.find(i=>i.cat==='veste')||null,acc:(d.acc||[]).map(id=>S.items.find(i=>i.id===id)).filter(Boolean)};
+    if(!o.t)return toast('Refais le planning');await validateOutfit(-1,o);d.done=true;await saveSettings();S.tab='today';render()},
   more:()=>{const n=S.proposals.length;S.page++;if(S.page*4>=n){S.page=0;S.seed++;S.dirty=true}render()},
   jacket:()=>{const m=currentMode();const cur=S.useJacket===null?(m==='frais'||m==='froid'):S.useJacket;S.useJacket=!cur;S.dirty=true;S.page=0;render()},
   wmode:a=>{S.settings.weatherOverride=a.dataset.m;saveSettings();S.useJacket=null;S.dirty=true;S.page=0;render()},
