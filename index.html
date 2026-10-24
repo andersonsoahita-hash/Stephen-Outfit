@@ -30,7 +30,7 @@ body{background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%) fixed;min-h
 #app,.nav{position:relative;z-index:1}
 .card,.chip,.pill{backdrop-filter:blur(6px)}
 .card{background:color-mix(in srgb,var(--card) 88%,transparent)}
-#app.enter>*{animation:rise .55s cubic-bezier(.2,.8,.2,1) both}
+#app.enter>*{animation:rise .3s ease both}
 #app.enter>*:nth-child(2){animation-delay:.05s}#app.enter>*:nth-child(3){animation-delay:.1s}#app.enter>*:nth-child(4){animation-delay:.15s}#app.enter>*:nth-child(5){animation-delay:.2s}#app.enter>*:nth-child(n+6){animation-delay:.25s}
 #app.enter .grid3>*{animation:pop .45s cubic-bezier(.2,.9,.3,1.2) both}
 #app.enter .grid3>*:nth-child(2){animation-delay:.04s}#app.enter .grid3>*:nth-child(3){animation-delay:.08s}#app.enter .grid3>*:nth-child(4){animation-delay:.12s}#app.enter .grid3>*:nth-child(n+5){animation-delay:.16s}
@@ -38,11 +38,8 @@ body{background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%) fixed;min-h
 @keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
 .btn{transition:transform .12s,filter .2s}.btn:active{transform:scale(.97)}
 .chip{transition:background .2s,color .2s,transform .12s}.chip:active{transform:scale(.94)}
-.btn:not(.ghost):not(.line):not(.bad){background-image:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.22) 50%,transparent 70%);background-size:250% 100%;animation:shine 5s ease-in-out infinite}
 @keyframes shine{0%,60%{background-position:150% 0}100%{background-position:-50% 0}}
-.nav button.on span{display:inline-block;animation:bounce .5s}
 @keyframes bounce{40%{transform:translateY(-6px) scale(1.2)}}
-.brand .logo{animation:sway 6s ease-in-out infinite}
 @keyframes sway{50%{transform:rotate(-5deg)}}
 .strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}.strip>div{width:62px;flex:none}.strip .tn{font-size:10.5px;line-height:1.15;margin-top:3px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav button{min-width:0}.nav button span{font-size:19px}
@@ -64,43 +61,24 @@ body{background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%) fixed;min-h
 #splash .go{position:absolute;bottom:calc(34px + env(safe-area-inset-bottom));left:50%;margin-left:-82px;width:164px;padding:14px 0;border:1.5px solid rgba(255,255,255,.7);border-radius:99px;background:rgba(255,255,255,.12);color:#fff;font:600 16px -apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:3px;text-transform:uppercase;cursor:pointer;opacity:0;backdrop-filter:blur(8px);animation:rise .9s 2.4s both,goPulse 2.4s ease-in-out 3.4s infinite}
 #splash .go:active{transform:scale(.95)}
 @keyframes goPulse{50%{box-shadow:0 0 0 12px rgba(255,255,255,.1)}}
-#splash .scene{position:absolute;left:50%;margin-left:-130px;bottom:calc(112px + env(safe-area-inset-bottom));width:260px;height:134px;opacity:0;animation:rise .8s 1.9s both}
-#splash .scene>*{position:absolute;font-style:normal;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.35))}
-#splash .wd{left:0;top:38px;font-size:60px;animation:wob 5.6s ease-in-out infinite}
-#splash .hd{left:176px;top:10px;font-size:32px}
-#splash .cool{opacity:0;animation:cool 5.6s linear infinite}
-#splash .g{font-size:32px;left:176px;opacity:0;animation:dress 5.6s cubic-bezier(.4,0,.3,1) infinite;animation-delay:var(--d)}
-@keyframes dress{0%{opacity:0;transform:translate(-150px,var(--sy)) scale(.3) rotate(-40deg)}5%{opacity:1}14%{transform:translate(-80px,calc(var(--sy) - 52px)) scale(1.05) rotate(20deg)}24%{opacity:1;transform:translate(0,0) scale(1.28) rotate(0)}30%{transform:scale(1)}84%{opacity:1;transform:none}92%,100%{opacity:0;transform:translateY(-8px) scale(.9)}}
-@keyframes wob{0%,100%{transform:none}6%,15%,24%,33%{transform:rotate(-7deg) scale(1.06)}10%,19%,28%,37%{transform:rotate(5deg)}}
-@keyframes cool{0%,50%{opacity:0;transform:scale(.6)}56%{opacity:1;transform:scale(1.35)}62%,86%{opacity:1;transform:scale(1)}94%,100%{opacity:0}}
-@media (max-height:700px){#splash .scene{transform:scale(.8);bottom:calc(100px + env(safe-area-inset-bottom))}}
-#rail{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top) + 58px);height:46px;z-index:60;pointer-events:none;overflow:hidden;opacity:0}
-#rail div{display:flex;gap:26px;font-size:30px;white-space:nowrap;width:max-content;filter:drop-shadow(0 6px 8px rgba(0,0,0,.25))}
-#rail div span{display:inline-block;transform-origin:50% 0;animation:swing .7s ease-in-out infinite alternate}
-#rail div span:nth-child(odd){animation-delay:.15s}
-#rail::before{content:"";position:absolute;left:0;right:0;top:3px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--sand),transparent)}
-#rail.go-next{animation:railN .75s cubic-bezier(.4,0,.2,1)}#rail.go-prev{animation:railP .75s cubic-bezier(.4,0,.2,1)}
-#rail.go-next div{animation:slideN .75s cubic-bezier(.4,0,.2,1)}#rail.go-prev div{animation:slideP .75s cubic-bezier(.4,0,.2,1)}
-@keyframes railN{0%,100%{opacity:0}18%,78%{opacity:1}}@keyframes railP{0%,100%{opacity:0}18%,78%{opacity:1}}
-@keyframes slideN{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}@keyframes slideP{from{transform:translateX(-100%)}to{transform:translateX(100vw)}}
-@keyframes swing{from{transform:rotate(-9deg)}to{transform:rotate(9deg)}}
+#splash .fx{position:absolute;left:50%;top:45%;width:0;height:0;pointer-events:none}
+#splash .fx i{position:absolute;left:-20px;top:-20px;font-style:normal;line-height:1;font-size:var(--s,34px);opacity:0;animation:burst 1.5s cubic-bezier(.3,.7,.3,1) forwards;animation-delay:var(--d);filter:drop-shadow(0 6px 10px rgba(0,0,0,.4))}
+#splash .fx i b{display:block;font-weight:400;animation:bob 3.2s ease-in-out infinite alternate;animation-delay:calc(var(--d) + 1.5s)}
+@keyframes burst{0%{opacity:0;transform:translate(0,0) scale(.15) rotate(0)}12%{opacity:1}42%{transform:translate(var(--x),var(--y)) scale(1.3) rotate(var(--r))}56%{transform:translate(var(--x),calc(var(--y) - 34px)) scale(1.05) rotate(calc(var(--r) * -.5))}68%{transform:translate(var(--x),var(--y)) scale(1.12) rotate(calc(var(--r) * .3))}78%{transform:translate(var(--x),calc(var(--y) - 12px)) scale(1)}88%{transform:translate(var(--x),var(--y)) scale(1.04)}100%{opacity:1;transform:translate(var(--x),var(--y)) scale(1) rotate(0)}}
+@keyframes bob{from{transform:translateY(-7px) rotate(-5deg)}to{transform:translateY(7px) rotate(5deg)}}
+
 #app{view-transition-name:page}#nav{view-transition-name:navbar}
 ::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
-::view-transition-old(page){animation:vtOut .32s cubic-bezier(.5,0,.8,.3) both}
-::view-transition-new(page){animation:vtIn .55s cubic-bezier(.16,.9,.25,1) .05s both}
-html[data-vt=prev]::view-transition-old(page){animation-name:vtOutR}html[data-vt=prev]::view-transition-new(page){animation-name:vtInR}
-html[data-vt=fade]::view-transition-old(page){animation:vtFo .2s ease both}html[data-vt=fade]::view-transition-new(page){animation:vtFi .32s ease .04s both}
-::view-transition-group(navbar){animation-duration:.01s}
-@keyframes vtOut{to{opacity:0;transform:translateX(-60px) scale(.97);filter:blur(5px)}}
-@keyframes vtIn{from{opacity:0;transform:translateX(70px) scale(.97);filter:blur(5px)}}
-@keyframes vtOutR{to{opacity:0;transform:translateX(60px) scale(.97);filter:blur(5px)}}
-@keyframes vtInR{from{opacity:0;transform:translateX(-70px) scale(.97);filter:blur(5px)}}
-@keyframes vtFo{to{opacity:0;transform:scale(.99)}}@keyframes vtFi{from{opacity:0;transform:translateY(8px)}}
-.nav .ind{position:absolute;top:0;left:6px;width:calc((100% - 12px)/6);height:3px;display:block;pointer-events:none;transition:transform .5s cubic-bezier(.3,1.35,.4,1)}
+::view-transition-old(page){animation:vtFo .14s ease both}
+::view-transition-new(page){animation:vtIn .3s cubic-bezier(.2,.8,.2,1) both}
+html[data-vt=prev]::view-transition-new(page){animation-name:vtInR}
+html[data-vt=fade]::view-transition-new(page){animation:vtFi .18s ease both}
+@keyframes vtFo{to{opacity:0}}@keyframes vtIn{from{opacity:0;transform:translateX(22px)}}@keyframes vtInR{from{opacity:0;transform:translateX(-22px)}}@keyframes vtFi{from{opacity:0}}
+.nav .ind{position:absolute;top:0;left:6px;width:calc((100% - 12px)/6);height:3px;display:block;pointer-events:none;transition:transform .3s ease}
 .nav .ind::after{content:"";display:block;width:34px;height:3px;border-radius:0 0 4px 4px;margin:0 auto;background:var(--acc);box-shadow:0 2px 10px var(--acc)}
 .nav button{transition:color .3s,transform .15s}.nav button:active{transform:scale(.9)}
-.sheet-bg{animation:fadeIn .25s ease both}.sheet{animation:slideUp .45s cubic-bezier(.16,.9,.25,1) both}
-@keyframes fadeIn{from{opacity:0}}@keyframes slideUp{from{transform:translateY(60px);opacity:.4}}
+.sheet-bg{animation:fadeIn .18s ease both}.sheet{animation:slideUp .28s ease both}
+@keyframes fadeIn{from{opacity:0}}@keyframes slideUp{from{transform:translateY(24px);opacity:.5}}
 @keyframes ltr{from{opacity:0;transform:translateY(40px) scale(.4) rotate(-12deg)}to{opacity:1;transform:none}}
 @keyframes logoIn{0%{opacity:0;transform:scale(.1) rotate(-200deg)}60%{opacity:1}100%{opacity:1;transform:none}}
 @keyframes logoPulse{50%{transform:scale(1.07)}}
@@ -169,6 +147,15 @@ input[type=text],input[type=number],select{width:100%;padding:12px;border-radius
 .photo-box img{width:100%;height:100%;object-fit:contain}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));background:#1E2A23;color:#fff;padding:10px 16px;border-radius:99px;font-size:14px;z-index:80;max-width:90%}
 .big{font-size:34px;font-weight:700;line-height:1}
+.hero{margin-top:14px;padding:18px 18px 16px;border-radius:24px;color:#fff;background:radial-gradient(circle at 85% 10%,rgba(240,201,135,.45),transparent 45%),linear-gradient(135deg,#3c7a58,#1f4733 70%);box-shadow:0 10px 30px rgba(31,71,51,.35);position:relative;overflow:hidden}
+.hero .hg{font-size:15px;opacity:.9}.hero .hrow{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.hero .ht{font-size:58px;font-weight:700;line-height:1;letter-spacing:-2px}.hero .hs{font-size:13px;opacity:.85;margin-top:4px}
+.hero .hi{font-size:62px;line-height:1;filter:drop-shadow(0 6px 10px rgba(0,0,0,.3));animation:bob2 4s ease-in-out infinite alternate}
+.hero .htip{margin-top:12px;padding:9px 12px;border-radius:14px;background:rgba(255,255,255,.14);font-size:14px}
+@keyframes bob2{to{transform:translateY(-5px) rotate(4deg)}}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.stats div{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 6px;text-align:center}
+.stats b{display:block;font-size:26px;line-height:1.1}.stats span{font-size:12px;color:var(--muted)}
 .out{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .out.three{grid-template-columns:repeat(3,minmax(0,1fr))}
 .chips.five{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;overflow:visible}
@@ -190,8 +177,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<div id="splash"><div class="glow"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="core"><img src="icon-192.png" alt=""><div class="ttl"><span style="animation-delay:0.90s">A</span><span style="animation-delay:1.02s">k</span><span style="animation-delay:1.14s">a</span><span style="animation-delay:1.26s">n</span><span style="animation-delay:1.38s">j</span><span style="animation-delay:1.50s">o</span></div><div class="by">by Stephen</div></div><div class="scene"><i class="wd">🗄️</i><i class="hd">🙂</i><i class="hd cool">😎</i><i class="g" style="top:-14px;--sy:63px;--d:1.9s">🧢</i><i class="g" style="top:42px;--sy:7px;--d:2.5s">👕</i><i class="g" style="top:74px;--sy:-25px;--d:3.1s">👖</i><i class="g" style="top:104px;--sy:-55px;--d:3.7s">👟</i></div><button class="go" id="goBtn" type="button">Entrer</button></div>
-<div id="rail" aria-hidden="true"><div><span>🧥</span><span>👕</span><span>👖</span><span>👗</span><span>👟</span><span>🧣</span><span>👚</span><span>🩳</span><span>🧢</span><span>👔</span></div></div>
+<div id="splash"><div class="glow"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="core"><img src="icon-192.png" alt=""><div class="ttl"><span style="animation-delay:0.90s">A</span><span style="animation-delay:1.02s">k</span><span style="animation-delay:1.14s">a</span><span style="animation-delay:1.26s">n</span><span style="animation-delay:1.38s">j</span><span style="animation-delay:1.50s">o</span></div><div class="by">by Stephen</div></div><div class="fx"><i style="--x:-135px;--y:-300px;--r:-24deg;--d:0.25s;--s:30px"><b>👕</b></i><i style="--x:120px;--y:-280px;--r:18deg;--d:0.34s;--s:34px"><b>👖</b></i><i style="--x:-30px;--y:-235px;--r:-14deg;--d:0.43s;--s:38px"><b>🧥</b></i><i style="--x:150px;--y:-170px;--r:26deg;--d:0.52s;--s:32px"><b>👟</b></i><i style="--x:-150px;--y:-140px;--r:-24deg;--d:0.61s;--s:30px"><b>⌚</b></i><i style="--x:30px;--y:-330px;--r:18deg;--d:0.7s;--s:34px"><b>👗</b></i><i style="--x:-145px;--y:150px;--r:-14deg;--d:0.79s;--s:38px"><b>🧢</b></i><i style="--x:152px;--y:40px;--r:26deg;--d:0.88s;--s:32px"><b>🕶️</b></i><i style="--x:-60px;--y:215px;--r:-24deg;--d:0.97s;--s:30px"><b>🧣</b></i><i style="--x:80px;--y:250px;--r:18deg;--d:1.06s;--s:34px"><b>👔</b></i><i style="--x:-150px;--y:300px;--r:-14deg;--d:1.15s;--s:38px"><b>🩳</b></i><i style="--x:145px;--y:305px;--r:26deg;--d:1.24s;--s:32px"><b>👚</b></i><i style="--x:-15px;--y:320px;--r:-24deg;--d:1.33s;--s:30px"><b>🎒</b></i><i style="--x:0px;--y:-190px;--r:18deg;--d:1.42s;--s:34px"><b>👜</b></i><i style="--x:-148px;--y:20px;--r:-14deg;--d:1.51s;--s:38px"><b>💍</b></i><i style="--x:150px;--y:-30px;--r:26deg;--d:1.6s;--s:32px"><b>🧦</b></i></div><button class="go" id="goBtn" type="button">Entrer</button></div>
 <div id="bg"><i></i><i></i><i></i></div>
 <div id="app"></div>
 <nav class="nav" id="nav"></nav>
@@ -512,8 +498,18 @@ function viewToday(){
   const mode=currentMode(),w=S.weather,e=todayEntry();
   const need=!S.items.some(i=>i.cat==='robe')&&(!S.items.some(i=>i.cat==='haut')||!S.items.some(i=>i.cat==='bas'));
   let h=`<div class="row sp"><div><div class="brand"><img class="logo" src="icon-192.png" alt="" width="38" height="38"><b>Akanjo</b><span>by Stephen</span></div><div class="sub">${esc(fmtDate(todayStr()))}</div></div></div>`;
-  h+=`<div class="card"><div class="row sp"><div><div class="big">${w?Math.round(w.feel)+'°':'—'}</div><div class="sub">${esc(S.settings.place)}${w?` · ${Math.round(w.min)}° / ${Math.round(w.max)}°${w.rain!=null?` · pluie ${w.rain}%`:''}`:' · météo indisponible'}</div></div><span class="pill" style="font-weight:700">${MODES[mode]}</span></div>
-  <div class="chips five" style="margin-top:10px">${['auto',...Object.keys(MODES)].map(m=>`<span class="chip ${S.settings.weatherOverride===m?'on':''}" data-a="wmode" data-m="${m}">${m==='auto'?'Auto':MODES[m]}</span>`).join('')}</div></div>`;
+  const hr=new Date().getHours(),greet=hr<5?'Bonne nuit':hr<12?'Bonjour':hr<18?'Bon après-midi':'Bonsoir';
+  const wi=(w&&w.rain>=60)?'🌧️':{chaud:'☀️',doux:'🌤️',frais:'🍂',froid:'❄️'}[mode];
+  const tip={chaud:'Tissus légers aujourd’hui.',doux:'Temps agréable : une couche suffit.',frais:'Prévois une veste.',froid:'Couvre-toi : veste chaude conseillée.'}[mode]+(w&&w.rain>=50?' Pluie probable, prends un parapluie ☔.':'');
+  const clean=S.items.filter(i=>i.cat!=='acc'&&avail(i)).length,dirtyN=S.items.filter(i=>i.cat!=='acc'&&(i.status==='sale'||i.status==='lavage')).length;
+  let streak=0;{const ds=new Set(S.log.map(x=>x.date));let d=ds.has(todayStr())?todayStr():addDays(todayStr(),-1);while(ds.has(d)){streak++;d=addDays(d,-1)}}
+  h+=`<div class="hero"><div class="hg">${esc(greet)} 👋</div><div class="hrow"><div><div class="ht">${w?Math.round(w.feel)+'°':'—'}</div><div class="hs">${esc(S.settings.place)}${w?` · ${Math.round(w.min)}° / ${Math.round(w.max)}°${w.rain!=null?` · 💧 ${w.rain}%`:''}`:' · météo indisponible'}</div></div><div class="hi">${wi}</div></div><div class="htip">${esc(tip)}</div></div>
+  <div class="chips five" style="margin:12px 0 0">${['auto',...Object.keys(MODES)].map(m=>`<span class="chip ${S.settings.weatherOverride===m?'on':''}" data-a="wmode" data-m="${m}">${m==='auto'?'Auto':MODES[m]}</span>`).join('')}</div>
+  ${S.items.length?`<div class="stats"><div><b>${clean}</b><span>👕 Propres</span></div><div><b>${dirtyN}</b><span>🧺 À laver</span></div><div><b>${streak}</b><span>🔥 Série (j)</span></div></div>`:''}`;
+  {const pl=S.settings.plan&&S.settings.plan.days.find(d=>d.date===addDays(todayStr(),1));const its=pl?pl.ids.map(id=>S.items.find(i=>i.id===id)).filter(Boolean):[];
+   if(its.length&&its.length===pl.ids.length)h+=`<div class="card" style="margin-top:12px"><div class="row sp"><b>📅 Demain</b><a href="#" data-a="tab" data-t="week" style="color:var(--acc);font-size:14px"><b>Voir la semaine</b></a></div><div class="strip" style="margin-top:10px">${its.sort((a,b)=>ORDER[a.cat]-ORDER[b.cat]).map(i=>`<div>${thumb(i)}<div class="tn">${esc(i.name)}</div></div>`).join('')}</div></div>`}
+  {const old=S.items.filter(i=>i.cat!=='acc'&&avail(i)).map(i=>({i,d:i.lastWorn?daysSince(i.lastWorn):null})).sort((a,b)=>(b.d===null?999:b.d)-(a.d===null?999:a.d)).slice(0,4);
+   if(old.length>=3&&S.log.length)h+=`<div class="card" style="margin-top:12px"><b>✨ À ressortir</b><div class="sub" style="margin:2px 0 10px">Tes pièces oubliées depuis le plus longtemps</div><div class="strip">${old.map(x=>`<div>${thumb(x.i)}<div class="tn">${esc(x.i.name)}</div><div class="tn" style="color:var(--acc)">${x.d===null?'jamais porté':'il y a '+x.d+' j'}</div></div>`).join('')}</div></div>`}
   const lowT=S.items.filter(i=>i.cat==='haut'&&avail(i)).length;
   if(S.items.length&&lowT<S.settings.lowTops)h+=`<div class="banner warn">Il te reste <b>${lowT}</b> haut${lowT>1?'s':''} propre${lowT>1?'s':''}. Pense à lancer une machine. <a href="#" data-a="tab" data-t="wash" style="color:inherit"><b>Voir le panier</b></a></div>`;
   if(S.items.length&&!S.settings.profil)h+=`<div class="card"><b>Pour qui est cette armoire ?</b><div class="sub" style="margin:4px 0 10px">Ça adapte seulement les types de vêtements proposés.</div><div class="chips">${PROFILS.map(([k,l])=>`<span class="chip" data-a="profil" data-p="${k}">${l}</span>`).join('')}</div></div>`;
@@ -599,7 +595,7 @@ function viewSettings(){
   <div class="card"><h3>Sauvegarde</h3><div class="sub" style="margin-bottom:10px">Dernière sauvegarde : ${le}. Garde le fichier ailleurs (Fichiers, iCloud, Drive) : si tu perds le téléphone ou les données du navigateur, c’est ta seule copie.</div><div class="grid2"><button class="btn" data-a="export">Exporter</button><button class="btn line" data-a="import">Importer</button></div><div class="sub" style="margin:10px 0 6px">« Importer » remplace tout. « Ajouter » garde ton armoire et ajoute seulement les nouveaux vêtements d’un fichier.</div><button class="btn ghost" data-a="merge">Ajouter depuis un fichier</button><input type="file" id="impFile" accept="application/json,.json" hidden><input type="file" id="mrgFile" accept="application/json,.json" hidden></div>
   <div class="card"><h3>Exemples</h3><div class="sub" style="margin-bottom:10px">Pour tester l’app sans photographier : 16 vêtements fictifs, faciles à supprimer.</div>${ex?`<button class="btn line" data-a="demoOff">Supprimer les exemples</button>`:`<button class="btn ghost" data-a="demoOn">Charger les exemples</button>`}</div>
   <div class="card"><h3>Données</h3><div class="kv"><span>Vêtements</span><b>${S.items.length}</b></div><div class="kv"><span>Tenues journalisées</span><b>${S.log.length}</b></div><div class="kv"><span>Stockage protégé</span><b id="persist">…</b></div><button class="btn bad" style="margin-top:12px" data-a="reset">Tout effacer</button></div>
-  <div class="small" style="text-align:center;margin:18px 0">Akanjo (« vêtement » en malgache) · by Stephen · v4.4</div>`;
+  <div class="small" style="text-align:center;margin:18px 0">Akanjo (« vêtement » en malgache) · by Stephen · v4.5</div>`;
 }
 
 /* ───────── Rendu global ───────── */
@@ -607,14 +603,12 @@ const METEO=[['chaud','☀️ Chaud'],['doux','🌤️ Doux'],['frais','🍂 Fra
 const TABS=[['today','🏠','Accueil'],['week','📅','Semaine'],['closet','🗄️','Armoire'],['wash','🧺','Lavage'],['log','📖','Journal'],['set','⚙️','Réglages']];
 const TABIDX=k=>TABS.findIndex(t=>t[0]===k);
 const VT=!!document.startViewTransition&&!matchMedia('(prefers-reduced-motion:reduce)').matches;
-function railGo(kind){const r=document.getElementById('rail');if(!r)return;r.className='';void r.offsetWidth;r.className='go-'+kind;setTimeout(()=>{r.className=''},900)}
 function render(){
   if(!S.settings)return;
   if(!VT||!S._did){S._did=true;return renderNow()}
   const kind=S._lt!==S.tab?(TABIDX(S.tab)>TABIDX(S._lt)?'next':'prev'):'fade';
   document.documentElement.dataset.vt=kind;
-  if(kind!=='fade')railGo(kind);
-  try{document.startViewTransition(()=>{renderNow()})}catch(e){renderNow()}
+  try{const t=document.startViewTransition(()=>{renderNow()});for(const k of ['ready','finished','updateCallbackDone'])t[k]&&t[k].catch(()=>{})}catch(e){renderNow()}
 }
 function renderNow(){
   if(!S.settings)return;
